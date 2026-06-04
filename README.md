@@ -153,6 +153,4 @@ scipy
 
 ---
 
-## Auteur
 
-**kgueye** — [Kaggle](https://www.kaggle.com/kgueye)
