@@ -5,6 +5,19 @@
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.0-orange)
 ![SHAP](https://img.shields.io/badge/SHAP-interpretability-red)
 ![Kaggle](https://img.shields.io/badge/Kaggle-Dataset-20BEFF)
+![Docker](https://img.shields.io/badge/Docker-containerized-2496ED)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688)
+![CloudRun](https://img.shields.io/badge/Google_Cloud_Run-deployed-4285F4)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-Spaces-FFD21E)
+
+---
+
+## 🚀 Demo en ligne
+
+| | URL |
+|---|---|
+| **Interface Gradio** | [kgueye001-fraud-detection.hf.space](https://kgueye001-fraud-detection.hf.space) |
+| **API REST** | [fraud-api-245513771842.europe-west1.run.app/docs](https://fraud-api-245513771842.europe-west1.run.app/docs) |
 
 ---
 
@@ -43,6 +56,13 @@ credit-card-fraud-detection/
 │   ├── 02_preprocessing.ipynb        # Nettoyage & feature engineering
 │   ├── 03_modeling.ipynb             # Modélisation & stacking
 │   └── 04_evaluation_shap.ipynb      # Évaluation & interprétabilité
+├── deployment/
+│   ├── models/                       # Modèles sérialisés (.pkl)
+│   ├── app.py                        # API FastAPI
+│   ├── model.py                      # Logique de prédiction
+│   ├── gradio_app.py                 # Interface Gradio
+│   ├── Dockerfile                    # Containerisation
+│   └── requirements.txt              # Dépendances production
 ├── data/
 │   └── README.md                     # Lien vers le dataset Kaggle
 ├── requirements.txt
@@ -106,10 +126,74 @@ Pour la transaction #840 (probabilité fraude : 98.54%), V14 contribue
 
 ---
 
-## Installation
+## Déploiement
+
+### Stack technique
+
+| Composant | Technologie | Rôle |
+|---|---|---|
+| Sérialisation | `joblib` | Sauvegarde des 4 modèles + scalers |
+| API REST | `FastAPI` + `uvicorn` | Endpoint `/predict` avec validation Pydantic |
+| Containerisation | `Docker` | Image `python:3.10-slim` + `libgomp1` |
+| Registry | Google Container Registry | Stockage de l'image Docker |
+| Cloud | Google Cloud Run | Déploiement serverless — europe-west1 |
+| Interface | `Gradio` | Interface visuelle publique |
+| Hosting | Hugging Face Spaces | Démo accessible sans installation |
+
+### Architecture
+
+```
+Utilisateur
+    │
+    ▼
+Gradio (Hugging Face Spaces)
+    │  requête HTTP POST
+    ▼
+FastAPI (Google Cloud Run)
+    │
+    ▼
+FraudDetector.predict()
+    ├── preprocess() — log1p + StandardScaler
+    ├── LR.predict_proba()   × 0.9%
+    ├── RF.predict_proba()   × 72.6%
+    ├── XGB.predict_proba()  × 25.6%
+    ├── LGBM.predict_proba() × 0.9%
+    └── COBYLA weighted blend → {"prediction": "FRAUD", "fraud_probability": 0.68}
+```
+
+### Tester l'API
 
 ```bash
-git clone https://github.com/kgueye001/credit-card-fraud-detection
+curl -X POST "https://fraud-api-245513771842.europe-west1.run.app/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 0.0,
+    "time": 406.0,
+    "v_features": [-2.312, 1.952, -1.610, 3.998, -0.522,
+                   -1.427, -2.537, 1.392, -2.770, -2.772,
+                   3.202, -2.900, -0.595, -4.289, 0.390,
+                   -1.141, -2.830, -0.017, 0.417, 0.127,
+                   0.517, -0.035, -0.465, 0.320, 0.045,
+                   0.178, 0.261, -0.143]
+  }'
+```
+
+Réponse :
+```json
+{
+  "fraud_probability": 0.6804,
+  "prediction": "FRAUD",
+  "threshold": 0.46,
+  "model": "COBYLA Blending (RF 72.6% + XGB 25.6%)"
+}
+```
+
+---
+
+## Installation locale
+
+```bash
+git clone https://github.com/gueye001/credit-card-fraud-detection
 cd credit-card-fraud-detection
 pip install -r requirements.txt
 ```
@@ -118,22 +202,15 @@ Dataset disponible sur
 [Kaggle — Credit Card Fraud Detection](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud).
 Télécharger `creditcard.csv` dans le dossier `data/`.
 
----
+### Lancer l'API en local avec Docker
 
-## Requirements
+```bash
+cd deployment
+docker build -t fraud-api .
+docker run -p 8080:8080 fraud-api
+```
 
-```
-pandas
-numpy
-matplotlib
-seaborn
-scikit-learn
-xgboost
-lightgbm
-imbalanced-learn
-shap
-scipy
-```
+API disponible sur `http://localhost:8080/docs`
 
 ---
 
@@ -150,7 +227,3 @@ scipy
 5. **Les fraudes ratées ont un profil distinct** —
    elles nécessitent des features supplémentaires
    (historique client, géolocalisation, device fingerprinting)
-
----
-
-
