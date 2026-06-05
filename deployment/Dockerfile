@@ -5,7 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY models/ ./models/
+COPY model.py .
+COPY app.py .
 
 EXPOSE 8080
 
