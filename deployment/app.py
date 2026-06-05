@@ -13,7 +13,7 @@ detector = FraudDetector()
 
 
 class Transaction(BaseModel):
-    amount: float = Field(..., gt=0, description="Montant en euros")
+    amount: float = Field(..., ge=0, description="Montant en euros")
     time: float   = Field(..., ge=0, description="Secondes depuis début dataset")
     v_features: List[float] = Field(..., min_items=28, max_items=28,
                                      description="Features V1 à V28")
